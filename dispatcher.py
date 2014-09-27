@@ -351,7 +351,10 @@ class Dispatcher(PlugIn):
         elif not stanza.getID():
             global ID
             ID+=1
-            _ID="%s_#%s#-%s" % (self._owner.User, SALT, `ID`)
+            if self._owner._registered_name:
+                _ID="%s_#%s#-%s" % (self._owner._registered_name, SALT, `ID`)
+            else:
+                _ID="%s_#%s#-%s" % ("dummy", SALT, `ID`)
             stanza.setID(_ID)
         else: _ID=stanza.getID()
         if self._owner._registered_name and not stanza.getAttr('from'): stanza.setAttr('from',self._owner._registered_name)
