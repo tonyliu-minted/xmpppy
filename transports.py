@@ -137,7 +137,7 @@ class TCPsocket(PlugIn):
                 try:
                     self._sock = socket.socket(af, socktype, proto)
                     self._sock.connect(sa)
-                    self._send=self._sock.sendall
+                    self._send=self._sock.send
                     self._recv=self._sock.recv
                     self.DEBUG("Successfully connected to remote host %s"%`server`,'start')
                     return 'ok'
@@ -206,34 +206,46 @@ class TCPsocket(PlugIn):
             raise IOError("Disconnected from server")
         return received
 
-    def send(self,raw_data,retry_timeout=1):
+    def send(self,raw_data,retry_timeout=0):
         """ Writes raw outgoing data. Blocks until done.
             If supplied data is unicode string, encodes it to utf-8 before send."""
-        if type(raw_data)==type(u''): raw_data = raw_data.encode('utf-8')
-        elif type(raw_data)<>type(''): raw_data = ustr(raw_data).encode('utf-8')
+        if type(raw_data)==type(u''): data_to_send = raw_data.encode('utf-8')
+        elif type(raw_data)<>type(''): data_to_send = ustr(raw_data).encode('utf-8')
+        else: data_to_send = raw_data
+        left_to_send = len(data_to_send)
+        total_sent = 0
+        retry = 0
         try:
-            sent = 0
-            while not sent:
+            while (left_to_send):
                 try:
-                    self._send(raw_data)
-                    sent = 1
+                    if retry == 0:
+                        data = data_to_send[total_sent:]
+                    bytes_sent = self._send(data)
+                    total_sent += bytes_sent
+                    left_to_send -= bytes_sent
                 except socket.sslerror, e:
+                    self.DEBUG("Exception %s while sending %s / %s bytes" % (e, total_sent, left_to_send), 'warn')
                     if e[0]==socket.SSL_ERROR_WANT_READ:
+                        retry +=1
                         sys.exc_clear()
-                        self.DEBUG("SSL_WANT_READ while sending data, wating to retry",'warn')
+                        self.DEBUG("SSL_WANT_READ while sending data, waiting to retry (%s)" % (retry),'warn')
                         select.select([self._sock],[],[],retry_timeout)
                         continue
                     if e[0]==socket.SSL_ERROR_WANT_WRITE:
+                        retry +=1
                         sys.exc_clear()
-                        self.DEBUG("SSL_WANT_WRITE while sending data, waiting to retry",'warn')
+                        self.DEBUG("SSL_WANT_WRITE while sending data, waiting to retry (%s)" % (retry),'warn')
                         select.select([],[self._sock],[],retry_timeout)
                         continue
                     raise
+            if not retry == 0:
+                self.DEBUG("Finally sent %s bytes of data after %s retries" % (total_sent, retry), 'warn')
+                retry = 0
             # Avoid printing messages that are empty keepalive packets.
-            if raw_data.strip():
-                self.DEBUG(raw_data,'sent')
+            if data_to_send.strip():
+                self.DEBUG(data_to_send,'sent')
                 if hasattr(self._owner, 'Dispatcher'): # HTTPPROXYsocket will send data before we have a Dispatcher
-                    self._owner.Dispatcher.Event('', DATA_SENT, raw_data)
+                    self._owner.Dispatcher.Event('', DATA_SENT, data_to_send)
         except:
             self.DEBUG("Socket error while sending data",'error')
             self._owner.disconnected()
