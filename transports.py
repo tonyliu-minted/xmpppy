@@ -334,7 +334,8 @@ class TLS(PlugIn):
         if owner.__dict__.has_key('TLS'): return  # Already enabled.
         PlugIn.PlugIn(self,owner)
         DBG_LINE='TLS'
-        if now: return self._startSSL()
+        if now: return self._startSSL(cert_reqs=owner.cert_reqs,
+            ca_certs=owner.ca_certs)
         if self._owner.Dispatcher.Stream.features:
             try: self.FeaturesHandler(self._owner.Dispatcher,self._owner.Dispatcher.Stream.features)
             except NodeProcessed: pass
@@ -364,11 +365,12 @@ class TLS(PlugIn):
         """ Returns true if there possible is a data ready to be read. """
         return self._tcpsock._seen_data or select.select([self._tcpsock._sock],[],[],timeout)[0]
 
-    def _startSSL(self):
+    def _startSSL(self, cert_reqs=ssl.CERT_NONE, ca_certs=None):
         """ Immidiatedly switch socket to TLS mode. Used internally."""
         """ Here we should switch pending_data to hint mode."""
         tcpsock=self._owner.Connection
-        tcpsock._sslObj = ssl.wrap_socket(tcpsock._sock, None, None)
+        tcpsock._sslObj = ssl.wrap_socket(
+            tcpsock._sock, cert_reqs=cert_reqs, ca_certs=ca_certs)
         tcpsock._sslIssuer = tcpsock._sslObj.getpeercert().get('issuer')
         tcpsock._sslServer = tcpsock._sslObj.getpeercert().get('server')
         tcpsock._recv = tcpsock._sslObj.read
@@ -390,6 +392,7 @@ class TLS(PlugIn):
             self.DEBUG("Got starttls response: "+self.starttls,'error')
             return
         self.DEBUG("Got starttls proceed response. Switching to TLS/SSL...",'ok')
-        self._startSSL()
+        self._startSSL(cert_reqs=self._owner.cert_reqs,
+            ca_certs=self._owner.ca_certs)
         self._owner.Dispatcher.PlugOut()
         dispatcher.Dispatcher().PlugIn(self._owner)
