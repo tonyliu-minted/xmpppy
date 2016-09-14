@@ -22,6 +22,7 @@ These classes can be used for simple applications "AS IS" though.
 """
 
 import socket
+import ssl
 import debug
 Debug=debug
 Debug.DEBUGGING_IS_ON=1
@@ -90,12 +91,17 @@ class PlugIn:
 import transports,dispatcher,auth,roster
 class CommonClient:
     """ Base for Client and Component classes."""
-    def __init__(self,server,port=5222,debug=['always', 'nodebuilder']):
+    def __init__(self,server,port=5222,debug=['always', 'nodebuilder'],
+        cert_reqs=ssl.CERT_NONE, ca_certs=None):
         """ Caches server name and (optionally) port to connect to. "debug" parameter specifies
             the debug IDs that will go into debug output. You can either specifiy an "include"
             or "exclude" list. The latter is done via adding "always" pseudo-ID to the list.
             Full list: ['nodebuilder', 'dispatcher', 'gen_auth', 'SASL_auth', 'bind', 'socket',
-             'CONNECTproxy', 'TLS', 'roster', 'browser', 'ibb'] . """
+             'CONNECTproxy', 'TLS', 'roster', 'browser', 'ibb'] .
+
+            cert_reqs, ca_certs, please see
+            https://docs.python.org/2/library/ssl.html#ssl.wrap_socket
+        """
         if self.__class__.__name__=='Client': self.Namespace,self.DBG='jabber:client',DBG_CLIENT
         elif self.__class__.__name__=='Component': self.Namespace,self.DBG=dispatcher.NS_COMPONENT_ACCEPT,DBG_COMPONENT
         self.defaultNamespace=self.Namespace
