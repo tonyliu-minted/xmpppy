@@ -118,6 +118,8 @@ class CommonClient:
         self.RegisterDisconnectHandler(self.DisconnectHandler)
         self.connected=''
         self._route=0
+        self.cert_reqs = cert_reqs
+        self.ca_certs = ca_certs
 
     def RegisterDisconnectHandler(self,handler):
         """ Register handler that will be called on disconnect."""
