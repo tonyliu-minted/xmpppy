@@ -10,7 +10,7 @@ if sys.version < '2.2.3':
 
 # Set proper release version in source code also!!!
 setup(name='xmpppy',
-      version='0.5.2.1',
+      version='0.5.2.2',
       author='Cyril Peponnet',
       author_email='cyril@peponnet.fr',
       url='https://github.com/ArchipelProject/xmpppy',
